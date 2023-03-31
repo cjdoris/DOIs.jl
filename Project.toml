@@ -1,0 +1,13 @@
+name = "DOIs"
+uuid = "098d957b-f51e-4c55-803a-a6a78aaa47bb"
+authors = ["Christopher Doris <github.com/cjdoris>"]
+version = "0.1.0"
+
+[deps]
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+
+[compat]
+julia = "1.6"
+HTTP = "1.7"
+URIs = "1.4"
