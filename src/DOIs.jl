@@ -1,24 +1,49 @@
 module DOIs
 
 import HTTP
+import Preferences
 import URIs
 
 export doi_resolve, doi_citation, doi_bibtex, doi_rdf_xml, doi_turtle, doi_citeproc_json, doi_ris
+
+_doi_url_prefix = Ref{Union{Nothing,String}}(nothing)
+
+function doi_url_prefix()
+    ans = _doi_url_prefix[]
+    if ans === nothing
+        ans = Preferences.@load_preference("url")::Union{String,Nothing}
+        if ans === nothing
+            ans = "https://dx.doi.org"
+        end
+        ans = string(rstrip(ans, '/'), "/")
+        _doi_url_prefix[] = ans
+    end
+    ans
+end
 
 """
     doi_url(doi)
 
 The URL where the given DOI can be resolved.
 
-If `doi` is already a URL, it is assumed to be a DOI URL and is returned directly.
+The DOI can also be given as a full URL.
+
+The URL prefix can be set with the `url` preference (`https://dx.doi.org` by default).
 """
 function doi_url(doi::AbstractString)
     doi = convert(String, doi)
-    if startswith(doi, "https://") || startswith(doi, "http://")
-        doi
+    prefix = doi_url_prefix()
+    if (m = match(r"^https?://(.*)$", doi)) !== nothing
+        rest = m.captures[1]
+        if (m = match(r"^(dx\.)?doi\.org/(.*)$", rest)) !== nothing
+            path = m.captures[2]
+        else
+            error("invalid DOI URL")
+        end
     else
-        "https://dx.doi.org/" * URIs.escapepath(doi)
+        path = URIs.escapepath(doi)
     end
+    string(prefix, path)
 end
 
 """
@@ -67,6 +92,27 @@ function doi_citation(doi::AbstractString, mime::AbstractString)
     doi_content(doi; headers=["Accept" => mime])
 end
 
+const _default_csl_style = Ref{Union{Nothing,Some{Union{Nothing,String}}}}(nothing)
+const _default_csl_locale = Ref{Union{Nothing,Some{Union{Nothing,String}}}}(nothing)
+
+function _get_default(ref, var, val)
+    if val !== nothing
+        val
+    else
+        ans = ref[]
+        if ans === nothing
+            ans = Preferences.@load_preference(var)::Union{String,Nothing}
+            ref[] = Some{Union{Nothing,String}}(ans)
+        else
+            ans = something(ans)
+        end
+        ans
+    end
+end
+
+csl_style(value) = _get_default(_default_csl_style, "csl_style", value)
+csl_locale(value) = _get_default(_default_csl_locale, "csl_locale", value)
+
 """
     doi_citation(doi; style=nothing, locale=nothing)
 
@@ -77,9 +123,14 @@ See the [CSL style repository](https://github.com/citation-style-language/styles
 for allowed `style`s.
 See the [CSL locale repository](https://github.com/citation-style-language/locales)
 for allowed `locale`s.
+
+The default style can be set with the `csl_style` preference and the default locale can be
+set with the `csl_locale` preference.
 """
 function doi_citation(doi::AbstractString; style::Union{Nothing,AbstractString}=nothing, locale::Union{Nothing,AbstractString}=nothing)
     accept_parts = ["text/x-bibliography"]
+    style = csl_style(style)
+    locale = csl_locale(locale)
     style !== nothing && push!(accept_parts, "style=$style")
     locale !== nothing && push!(accept_parts, "locale=$locale")
     doi_citation(doi, join(accept_parts, "; "))

@@ -40,3 +40,20 @@ See the docstrings for more information.
 - `doi_turtle(doi)` a RDF Turtle citation.
 - `doi_citeproc_json(doi)` a Citeproc JSON citation.
 - `doi_ris(doi)` a Research Info Systems (RIS) citation.
+
+## Preferences
+
+Some parts of this package are configured using Preferences.jl. The easiest way to set
+preferences is using PreferenceTools.jl as follows:
+```
+julia> using PreferenceTools
+
+julia> # press ] to enter the Pkg REPL
+
+pkg> preference add DOIs csl_style=bibtex csl_locale=en-GB
+```
+
+Allowed preferences:
+- `url`: The URL prefix of any DOI requests (default: `"https://dx.doi.org"`)
+- `csl_style`: The CSL style of citations from `doi_citation`.
+- `csl_locale`: The CSL locale of citations from `doi_citation`.
